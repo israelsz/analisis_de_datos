@@ -33,6 +33,17 @@ if(!require(ggcorrplot)){
   require(ggcorrplot)
 }
 
+if(!require(DescTools)){
+  install.packages("DescTools",dependencies = TRUE)
+  require(DescTools)
+}
+
+if(!require(corrplot)){
+  install.packages("corrplot",dependencies = TRUE)
+  require(corrplot)
+}
+
+
 
 # Se carga el archivo de datos CSV
 datos <- read.csv(file.choose(new = FALSE), header = FALSE, sep=",")
@@ -75,6 +86,9 @@ datosFiltrados$T3 <- as.numeric(datosFiltrados$T3)
 # Se filtra ademas la edad, debido a una muestra que excede los 100 años de edad
 datosFiltrados <- datosFiltrados[(datosFiltrados$age<100),]
 
+
+# Se convierten todas variables no numericas a factores
+#datosFiltrados <- datosFiltrados %>% mutate_if(is.character,as.factor)
 
 # Graficos de puntos por clase:
 # TSH vs Clase
@@ -125,14 +139,16 @@ graphAge <- ggplot(datosFiltrados,
 
 print(graphAge)
 
+
+############################################################################
+# Modelo de regresión logistica negativo v/s hipotiroidismo primario
+############################################################################
+
 # Creación de dataframe que contiene solo los datos de pacientes clasificados
 # negativos y con hipotiroidismo primario
 datosRlog <- datosFiltrados %>% 
   filter(classification == "negative" | classification == "primary hypothyroid")
 
-################################################################################
-# Regresión logística múltiple
-################################################################################
 
 # Descartar columnas inútiles
 datosRlog <- datosRlog %>% select(-c("TSH measured", "T3 measured", 
@@ -143,35 +159,13 @@ datosRlog <- datosRlog %>% select(-c("TSH measured", "T3 measured",
 # Se convierten todas variables no numericas a factores
 datosRlog <- datosRlog %>% mutate_if(is.character,as.factor)
 
-# Separar variable de respuesta de los predictores.
-#datosRlog[["classification"]] <- factor(datosRlog[["classification"]])
-
-#datosRlog[["sex"]] <- factor(datosRlog[["sex"]])
-#datosRlog[["on thyroxine"]] <- factor(datosRlog[["on thyroxine"]])
-#datosRlog[["query on thyroxine"]] <- factor(datosRlog[["query on thyroxine"]])
-#datosRlog[["on antithyroid medication"]] <- factor(datosRlog[["on antithyroid medication"]])
-#datosRlog[["sick"]] <- factor(datosRlog[["sick"]])
-#datosRlog[["pregnant"]] <- factor(datosRlog[["pregnant"]])
-#datosRlog[["thyroid surgery"]] <- factor(datosRlog[["thyroid surgery"]])
-#datosRlog[["I131 treatment"]] <- factor(datosRlog[["I131 treatment"]])
-#datosRlog[["query hypothyroid"]] <- factor(datosRlog[["query hypothyroid"]])
-#datosRlog[["query hyperthyroid"]] <- factor(datosRlog[["query hyperthyroid"]])
-#datosRlog[["lithium"]] <- factor(datosRlog[["lithium"]])
-#datosRlog[["goitre"]] <- factor(datosRlog[["goitre"]])
-#datosRlog[["tumor"]] <- factor(datosRlog[["tumor"]])
-#datosRlog[["hypopituitary"]] <- factor(datosRlog[["hypopituitary"]])
-#datosRlog[["psych"]] <- factor(datosRlog[["psych"]])
-#datosRlog[["referral source"]] <- factor(datosRlog[["referral source"]])
 
 # Se crea el conjunto de entrenamiento y el conjunto de prueba
-trainIndex <- createDataPartition(datosRlog$classification, p = 0.8, 
+trainIndex <- createDataPartition(datosRlog$classification, p = 0.7, 
                                   list = FALSE)
 datosEntrenamiento <- datosRlog[trainIndex,]
 datosPrueba  <- datosRlog[-trainIndex,]
 
-#########################################################################
-# Modelo de regresión logistica negativo v/s hipotiroidismo primario
-#########################################################################
 set.seed(99)
 # Se en entrenara el modelo con el metodo de validación de validación cruzada
 # de 10 pliegues, con 3 repeticiones.
@@ -225,7 +219,7 @@ datosRlogcompensado <- datosRlogcompensado %>% select(-c("TSH measured",
 datosRlogcompensado <- datosRlogcompensado %>% mutate_if(is.character,as.factor)
 
 # Se crea el conjunto de entrenamiento y el conjunto de prueba
-trainIndexB <- createDataPartition(datosRlogcompensado$classification, p = 0.8, 
+trainIndexB <- createDataPartition(datosRlogcompensado$classification, p = 0.7, 
                                   list = FALSE)
 
 datosEntrenamientoB <- datosRlogcompensado[trainIndexB,]
@@ -262,81 +256,10 @@ set.seed(99)
 prediccionesB <- predict(modeloB, datosPruebaB)
 print(confusionMatrix(prediccionesB, datosPruebaB$classification))
 
-#########################################################################
-# Modelo de regresión logistica hipo primario v/s hipotirodisimo compensado
-#########################################################################
-
-
-# Creación de dataframe que contiene solo los datos de pacientes clasificados
-# negativos y con hipotiroidismo compensado
-datosRlogHipoCompensado <- datosFiltrados %>% 
-  filter(classification == "primary hypothyroid" | 
-           classification == "compensated hypothyroid")
-
-# Descartar columnas inútiles
-datosRlogHipoCompensado <- datosRlogHipoCompensado %>% select(-c("TSH measured", 
-                                                         "T3 measured", 
-                                                         "TT4 measured",
-                                                         "T4U measured",
-                                                         "FTI measured",
-                                                         "TBG measured",
-                                                         "TBG"))
-
-# En este caso especifico se descartaran las siguientes columnas por solo
-# tener el mismo valor, lo que no aporta para la predicción
-datosRlogHipoCompensado <- datosRlogHipoCompensado %>% select(-c("pregnant", 
-                                                                 "goitre",
-                                                                 "hypopituitary"))
-
-
-# Se convierten todas variables no numericas a factores
-datosRlogHipoCompensado <- datosRlogHipoCompensado %>% 
-  mutate_if(is.character,as.factor)
-
-# Se crea el conjunto de entrenamiento y el conjunto de prueba
-trainIndexC <- createDataPartition(datosRlogHipoCompensado$classification, 
-                                   p = 0.8, 
-                                   list = FALSE)
-
-datosEntrenamientoC <- datosRlogHipoCompensado[trainIndexC,]
-datosPruebaC  <- datosRlogHipoCompensado[-trainIndexC,]
-
-set.seed(99)
-# Se entrenara el modelo con el metodo de validación de validación cruzada
-# de 10 pliegues, con 3 repeticiones.
-controlC <- trainControl(method="repeatedcv", number=10, repeats=3)
-# Se entrena el modelo, usando la curva ROC como factor de optimización
-set.seed(99)
-modeloC <- train(classification ~ ., 
-                 data=datosEntrenamientoC, 
-                 method="rocc", 
-                 preProcess="scale", 
-                 trControl=controlC)
-set.seed(99)
-# Se estima la importancia de cada variable
-importanciaC <- varImp(modeloC, scale=FALSE)
-# Printear el resumen de la importancia de cada variable
-print(importanciaC)
-# Graficar el resumen anterior de importancia por variable
-plot(importanciaC)
-# Imprime los predictores finales del mejor modelo
-predictors(modeloC)
-# Resumen del modelo
-print(modeloC)
-# Se puede ver gráficamente como varía la precisión según curva ROC de acuerdo
-# a las variables
-print(ggplot(modeloC))
-
-set.seed(99)
-# Evaluar calidad predictiva del modelo con el conjunto de prueba.
-prediccionesC <- predict(modeloC, datosPruebaC)
-print(confusionMatrix(prediccionesC, datosPruebaC$classification))
-
-
-
-#########################################################################
-# Modelo de regresión logistica todas las clases
-#########################################################################
+########################################################################
+# Modelo de regresión logistica todas las clases 
+# (Multinominal Logistic Regression)
+########################################################################
 
 
 # Creación de dataframe que contiene solo los datos de pacientes clasificados
@@ -361,24 +284,25 @@ datosModelo <- datosModelo %>%
 
 # Se crea el conjunto de entrenamiento y el conjunto de prueba
 trainIndexD <- createDataPartition(datosModelo$classification, 
-                                   p = 0.8, 
+                                   p = 0.7, 
                                    list = FALSE)
 
 datosEntrenamientoD <- datosModelo[trainIndexD,]
 datosPruebaD  <- datosModelo[-trainIndexD,]
 
-set.seed(99)
+set.seed(345)
 # Se entrenara el modelo con el metodo de validación de validación cruzada
-# de 10 pliegues, con 3 repeticiones.
-controlD <- trainControl(method="repeatedcv", number=10, repeats=3)
+# de 5 pliegues, con 10 repeticiones.
+controlD <- trainControl(method="repeatedcv", number=5, repeats=10)
 # Se entrena el modelo, usando la curva ROC como factor de optimización
-set.seed(99)
+set.seed(345)
 modeloD <- train(classification ~ ., 
                  data=datosEntrenamientoD, 
-                 method="rocc", 
-                 preProcess="scale", 
+                 method="multinom", 
+                 preProcess="scale",
+                 trace= FALSE,
                  trControl=controlD)
-set.seed(99)
+set.seed(345)
 # Se estima la importancia de cada variable
 importanciaD <- varImp(modeloD, scale=FALSE)
 # Printear el resumen de la importancia de cada variable
@@ -397,22 +321,6 @@ set.seed(99)
 # Evaluar calidad predictiva del modelo con el conjunto de prueba.
 prediccionesD <- predict(modeloD, datosPruebaD)
 print(confusionMatrix(prediccionesD, datosPruebaD$classification))
-
-###################################
-# Intento de prueba numero dos -> robado de internet
-###############################
-library(nnet)
-# Fit the model
-model <- nnet::multinom(classification ~., data = datosEntrenamientoD)
-# Summarize the model
-summary(model)
-# Make predictions
-predicted.classes <- model %>% predict(datosPruebaD)
-head(predicted.classes)
-# Model accuracy
-mean(predicted.classes == datosPruebaD$classification)
-# Mostrar matriz de confusión
-print(confusionMatrix(predicted.classes, datosPruebaD$classification))
 
 ###############################
 # Matriz de correlacion  ##
@@ -441,6 +349,33 @@ datosCor <- datosCor %>%
 model.matrix(~0+., data=datosCor) %>% 
   cor(use="pairwise.complete.obs") %>% 
   ggcorrplot(show.diag = F, type="lower", lab=TRUE, lab_size=2)
+
+
+############################## asd
+####################################
+datosCor <- datosFiltrados
+
+datosCor <- datosCor %>% select(-c("TSH measured", 
+                                   "T3 measured", 
+                                   "TT4 measured",
+                                   "T4U measured",
+                                   "FTI measured",
+                                   "TBG measured",
+                                   "TBG"))
+# Se convierten todas variables no numericas a factores
+datosCor <- datosCor %>% 
+  mutate_if(is.character,as.factor)
+
+
+
+corrplot(DescTools::PairApply(datosCor, DescTools::CramerV), 
+         method="number",
+         type="upper", 
+         diag=F)
+
+
+
+
 
 
 
