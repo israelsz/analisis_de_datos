@@ -333,7 +333,90 @@ prediccionesC <- predict(modeloC, datosPruebaC)
 print(confusionMatrix(prediccionesC, datosPruebaC$classification))
 
 
-### Matriz de correlacion#####
+
+#########################################################################
+# Modelo de regresión logistica todas las clases
+#########################################################################
+
+
+# Creación de dataframe que contiene solo los datos de pacientes clasificados
+# negativos y con hipotiroidismo compensado
+datosModelo <- datosFiltrados %>% 
+  filter(classification == "primary hypothyroid" | 
+           classification == "compensated hypothyroid" |
+           classification == "negative")
+
+# Descartar columnas inútiles
+datosModelo <- datosModelo %>% select(-c("TSH measured", 
+                                                                 "T3 measured", 
+                                                                 "TT4 measured",
+                                                                 "T4U measured",
+                                                                 "FTI measured",
+                                                                 "TBG measured",
+                                                                 "TBG"))
+
+# Se convierten todas variables no numericas a factores
+datosModelo <- datosModelo %>% 
+  mutate_if(is.character,as.factor)
+
+# Se crea el conjunto de entrenamiento y el conjunto de prueba
+trainIndexD <- createDataPartition(datosModelo$classification, 
+                                   p = 0.8, 
+                                   list = FALSE)
+
+datosEntrenamientoD <- datosModelo[trainIndexD,]
+datosPruebaD  <- datosModelo[-trainIndexD,]
+
+set.seed(99)
+# Se entrenara el modelo con el metodo de validación de validación cruzada
+# de 10 pliegues, con 3 repeticiones.
+controlD <- trainControl(method="repeatedcv", number=10, repeats=3)
+# Se entrena el modelo, usando la curva ROC como factor de optimización
+set.seed(99)
+modeloD <- train(classification ~ ., 
+                 data=datosEntrenamientoD, 
+                 method="rocc", 
+                 preProcess="scale", 
+                 trControl=controlD)
+set.seed(99)
+# Se estima la importancia de cada variable
+importanciaD <- varImp(modeloD, scale=FALSE)
+# Printear el resumen de la importancia de cada variable
+print(importanciaD)
+# Graficar el resumen anterior de importancia por variable
+plot(importanciaD)
+# Imprime los predictores finales del mejor modelo
+predictors(modeloD)
+# Resumen del modelo
+print(modeloD)
+# Se puede ver gráficamente como varía la precisión según curva ROC de acuerdo
+# a las variables
+print(ggplot(modeloD))
+
+set.seed(99)
+# Evaluar calidad predictiva del modelo con el conjunto de prueba.
+prediccionesD <- predict(modeloD, datosPruebaD)
+print(confusionMatrix(prediccionesD, datosPruebaD$classification))
+
+###################################
+# Intento de prueba numero dos -> robado de internet
+###############################
+library(nnet)
+# Fit the model
+model <- nnet::multinom(classification ~., data = datosEntrenamientoD)
+# Summarize the model
+summary(model)
+# Make predictions
+predicted.classes <- model %>% predict(datosPruebaD)
+head(predicted.classes)
+# Model accuracy
+mean(predicted.classes == datosPruebaD$classification)
+# Mostrar matriz de confusión
+print(confusionMatrix(predicted.classes, datosPruebaD$classification))
+
+###############################
+# Matriz de correlacion  ##
+###########################
 
 #library(ggcorrplot)
 
