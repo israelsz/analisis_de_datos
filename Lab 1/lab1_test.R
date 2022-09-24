@@ -90,6 +90,10 @@ datosFiltrados <- datosFiltrados[(datosFiltrados$age<100),]
 # Se convierten todas variables no numericas a factores
 #datosFiltrados <- datosFiltrados %>% mutate_if(is.character,as.factor)
 
+datosFiltrados <- datosFiltrados %>% 
+  filter(classification != "secondary hypothyroid")
+
+
 # Graficos de puntos por clase:
 # TSH vs Clase
 graphTSH <- ggplot(datosFiltrados, 
@@ -159,7 +163,7 @@ datosRlog <- datosRlog %>% select(-c("TSH measured", "T3 measured",
 # Se convierten todas variables no numericas a factores
 datosRlog <- datosRlog %>% mutate_if(is.character,as.factor)
 
-
+set.seed(99)
 # Se crea el conjunto de entrenamiento y el conjunto de prueba
 trainIndex <- createDataPartition(datosRlog$classification, p = 0.7, 
                                   list = FALSE)
@@ -171,13 +175,13 @@ set.seed(99)
 # de 10 pliegues, con 3 repeticiones.
 controlB <- trainControl(method="repeatedcv", number=10, repeats=3)
 # Se entrena el modelo, usando la curva ROC como factor de optimización
-set.seed(99)
+
 modelo <- train(classification ~ ., 
                data=datosEntrenamiento, 
                method="rocc", 
                preProcess="scale", 
                trControl=controlB)
-set.seed(99)
+
 # Se estima la importancia de cada variable
 importancia <- varImp(modelo, scale=FALSE)
 # Printear el resumen de la importancia de cada variable
@@ -191,8 +195,6 @@ print(modelo)
 # Se puede ver gráficamente como varía la precisión según curva ROC de acuerdo
 # a las variables
 print(ggplot(modelo))
-
-set.seed(99)
 # Evaluar calidad predictiva del modelo con el conjunto de prueba.
 predicciones <- predict(modelo, datosPrueba)
 print(confusionMatrix(predicciones, datosPrueba$classification))
@@ -218,6 +220,7 @@ datosRlogcompensado <- datosRlogcompensado %>% select(-c("TSH measured",
 # Se convierten todas variables no numericas a factores
 datosRlogcompensado <- datosRlogcompensado %>% mutate_if(is.character,as.factor)
 
+set.seed(99)
 # Se crea el conjunto de entrenamiento y el conjunto de prueba
 trainIndexB <- createDataPartition(datosRlogcompensado$classification, p = 0.7, 
                                   list = FALSE)
@@ -230,13 +233,12 @@ set.seed(99)
 # de 10 pliegues, con 3 repeticiones.
 controlB <- trainControl(method="repeatedcv", number=10, repeats=3)
 # Se entrena el modelo, usando la curva ROC como factor de optimización
-set.seed(99)
 modeloB <- train(classification ~ ., 
                 data=datosEntrenamientoB, 
                 method="rocc", 
                 preProcess="scale", 
                 trControl=controlB)
-set.seed(99)
+
 # Se estima la importancia de cada variable
 importanciaB <- varImp(modeloB, scale=FALSE)
 # Printear el resumen de la importancia de cada variable
@@ -251,7 +253,6 @@ print(modeloB)
 # a las variables
 print(ggplot(modeloB))
 
-set.seed(99)
 # Evaluar calidad predictiva del modelo con el conjunto de prueba.
 prediccionesB <- predict(modeloB, datosPruebaB)
 print(confusionMatrix(prediccionesB, datosPruebaB$classification))
@@ -261,7 +262,6 @@ print(confusionMatrix(prediccionesB, datosPruebaB$classification))
 # (Multinominal Logistic Regression)
 ########################################################################
 
-
 # Creación de dataframe que contiene solo los datos de pacientes clasificados
 # negativos y con hipotiroidismo compensado
 datosModelo <- datosFiltrados %>% 
@@ -270,18 +270,19 @@ datosModelo <- datosFiltrados %>%
            classification == "negative")
 
 # Descartar columnas inútiles
-datosModelo <- datosModelo %>% select(-c("TSH measured", 
-                                                                 "T3 measured", 
-                                                                 "TT4 measured",
-                                                                 "T4U measured",
-                                                                 "FTI measured",
-                                                                 "TBG measured",
-                                                                 "TBG"))
+datosModelo <- datosModelo %>% select(-c("TSH measured",
+                                         "T3 measured", 
+                                         "TT4 measured",
+                                         "T4U measured",
+                                         "FTI measured",
+                                         "TBG measured",
+                                         "TBG"))
 
 # Se convierten todas variables no numericas a factores
 datosModelo <- datosModelo %>% 
   mutate_if(is.character,as.factor)
 
+set.seed(99)
 # Se crea el conjunto de entrenamiento y el conjunto de prueba
 trainIndexD <- createDataPartition(datosModelo$classification, 
                                    p = 0.7, 
@@ -290,19 +291,19 @@ trainIndexD <- createDataPartition(datosModelo$classification,
 datosEntrenamientoD <- datosModelo[trainIndexD,]
 datosPruebaD  <- datosModelo[-trainIndexD,]
 
-set.seed(345)
+set.seed(99)
 # Se entrenara el modelo con el metodo de validación de validación cruzada
 # de 5 pliegues, con 10 repeticiones.
 controlD <- trainControl(method="repeatedcv", number=5, repeats=10)
 # Se entrena el modelo, usando la curva ROC como factor de optimización
-set.seed(345)
+
 modeloD <- train(classification ~ ., 
                  data=datosEntrenamientoD, 
                  method="multinom", 
                  preProcess="scale",
                  trace= FALSE,
                  trControl=controlD)
-set.seed(345)
+
 # Se estima la importancia de cada variable
 importanciaD <- varImp(modeloD, scale=FALSE)
 # Printear el resumen de la importancia de cada variable
@@ -317,7 +318,6 @@ print(modeloD)
 # a las variables
 print(ggplot(modeloD))
 
-set.seed(99)
 # Evaluar calidad predictiva del modelo con el conjunto de prueba.
 prediccionesD <- predict(modeloD, datosPruebaD)
 print(confusionMatrix(prediccionesD, datosPruebaD$classification))
@@ -332,18 +332,17 @@ print(confusionMatrix(prediccionesD, datosPruebaD$classification))
 
 datosCor <- datosFiltrados
 
-datosCor <- datosCor %>% select(-c("TSH measured", 
-                                                                 "T3 measured", 
-                                                                 "TT4 measured",
-                                                                 "T4U measured",
-                                                                 "FTI measured",
-                                                                 "TBG measured",
-                                                                 "TBG"))
+datosCor <- datosCor %>% select(-c("TSH measured",
+                                   "T3 measured", 
+                                   "TT4 measured",
+                                   "T4U measured",
+                                   "FTI measured",
+                                   "TBG measured",
+                                   "TBG"))
+
 # Se convierten todas variables no numericas a factores
 datosCor <- datosCor %>% 
   mutate_if(is.character,as.factor)
-
-
 
 
 model.matrix(~0+., data=datosCor) %>% 
