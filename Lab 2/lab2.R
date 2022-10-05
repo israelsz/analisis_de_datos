@@ -1,8 +1,3 @@
-if(!require(tidyverse)){
-  install.packages("tidyverse",dependencies = TRUE)
-  require(tidyverse)
-}
-
 if(!require(cluster)){
   install.packages("cluster",dependencies = TRUE)
   require(cluster)
@@ -12,6 +7,37 @@ if(!require(factoextra)){
   install.packages("factoextra",dependencies = TRUE)
   require(factoextra)
 }
+
+if(!require(FactoMineR)){
+  install.packages("FactoMineR",dependencies = TRUE)
+  require(FactoMineR)
+}
+
+if(!require(klaR)){
+  install.packages("klaR",dependencies = TRUE)
+  require(klaR)
+}
+
+if(!require(kamila)){
+  install.packages("kamila",dependencies = TRUE)
+  require(kamila)
+}
+
+if(!require(dplyr)){
+  install.packages("dplyr",dependencies = TRUE)
+  require(dplyr)
+}
+
+if(!require(clustMixType)){
+  install.packages("clustMixType",dependencies = TRUE)
+  require(clustMixType)
+}
+
+if(!require(Rtsne)){
+  install.packages("Rtsne",dependencies = TRUE)
+  require(Rtsne)
+}
+
 
 # Se carga el archivo de datos CSV
 datos <- read.csv(file.choose(new = FALSE), header = FALSE, sep=",")
@@ -75,9 +101,16 @@ datosFiltrados <- datosFiltrados[(datosFiltrados$age<100),]
 datosFiltrados <- datosFiltrados %>% 
   filter(classification != "secondary hypothyroid")
 
+datosFiltrados$classification <- as.factor(datosFiltrados$classification)
 
 # Se convierten todas variables no numericas a factores
 datosFiltrados <- datosFiltrados %>% mutate_if(is.character,as.factor)
+
+
+# Change box plot colors by groups
+p<-ggplot(datosFiltrados, aes(x=classification, y=TSH, fill=classification)) +
+  geom_boxplot()
+p
 
 # Finalmente se decide por eliminar las columnas “measured” que indican si fue
 # tomada la medición de la hormona que indica, debido a que con el filtro actual
@@ -87,17 +120,133 @@ datosFiltrados <- datosFiltrados %>% mutate_if(is.character,as.factor)
 # tampoco aportan información.
 
 datosFiltrados <- datosFiltrados %>% select(-c("TSH measured", 
-                                                         "T3 measured", 
-                                                         "TT4 measured", "T4U measured",
-                                                         "FTI measured", "TBG measured",
-                                                         "TBG"))
+                                               "T3 measured", 
+                                               "TT4 measured", 
+                                               "T4U measured",
+                                               "FTI measured", 
+                                               "TBG measured",
+                                               "TBG",
+                                               "referral source"))
 
-
-
+#datosCluster <- datosFiltrados
+#datosCluster <- datosFiltrados %>% select(-c("classification"))
+datosClusterScaled <- datosFiltrados
+datosClusterScaled$age <- scale(datosClusterScaled$age)[,1]
+datosClusterScaled$TSH <- scale(datosClusterScaled$TSH)[,1]
+datosClusterScaled$TT4 <- scale(datosClusterScaled$TT4)[,1]
+datosClusterScaled$T3 <- scale(datosClusterScaled$T3)[,1]
+datosClusterScaled$T4U <- scale(datosClusterScaled$T4U)[,1]
+datosClusterScaled$FTI <- scale(datosClusterScaled$FTI)[,1]
 
 ##############################################################################
-#                     Cluster
+#                     Clustering
 ##############################################################################
 
+##########################
+# Metodo con K-prototype
+#########################
+
+####################
+# Obtencion K optimo
+####################
+# Metodo del Codo
+wss<-vector()
+for (i in 2:15){
+set.seed(155)
+wss[i] <- sum(kproto(datosClusterScaled, i, verbose = FALSE)$withinss)
+}
+
+gProtoCodo<- plot(1:15, wss, type="b", xlab="Numero de Clusters",
+     ylab="Within groups sum of squares",
+     main="K optimo con el método del Codo",
+     pch=20, cex=2)
+
+# El metodo del codo indica que optimo seria k = 5
+
+# Metodo de la silueta
+siluetaProto <- vector()
+for(i in 2:15){
+  set.seed(86)
+  kpres <- kproto(datosClusterScaled, k = i,na.rm=FALSE, verbose = FALSE)
+  valor_sil<-validation_kproto(method = "silhouette", object=kpres)
+  siluetaProto[i] <- valor_sil
+}
+gProtoSil <- plot(1:15, siluetaProto, type = "b", ylab = "Silhouette", 
+     xlab = "Numero de Clusters", 
+     main = "K optimo con método de la Silueta")
+# El metodo de la silueta arroja un optimo de 3
+
+####################
+# Generación de Clusters
+####################
+# Cluster con k = 3
+set.seed(86)
+protoClusterk3 <- kproto(datosClusterScaled, 3, verbose = FALSE, nstart = 25)
 
 
+# Cluster con k = 5
+set.seed(86)
+protoClusterk5 <- kproto(datosClusterScaled, 5, verbose = FALSE, nstart = 25)
+
+############################
+# Resultados e interpretación
+############################
+
+summary(protoClusterk3)
+summary(protoClusterk5)
+
+table(protoClusterk3$cluster, datosFiltrados$classification)
+table(protoClusterk4$cluster, datosFiltrados$classification)
+
+#clprofiles(protoClusterk3, datosClusterScaled) #graficos
+#clprofiles(protoClusterk5, datosClusterScaled) #graficos
+
+
+##########################
+# Metodo con K-mediodes PAM K=3
+#########################
+
+# Calculo de la distancia de gower
+distanciaMediod <- daisy(datosClusterScaled, metric = "gower")
+
+#Cluster con k = 3
+mediod_clusterk3 <- pam(distanciaMediod, diss = TRUE, k = 3)
+
+#Grafico
+tsne_c <- Rtsne(distanciaMediod, is_distance = TRUE)
+graficoPAMk3 <- ggplot(data.frame(tsne_c$Y), 
+                       aes(x = X1, y = X2)) + 
+        labs(x = "Dim1", y = "Dim2", title = "Cluster PAM k=3") + 
+        geom_point(color = factor(mediod_clusterk3$clustering))
+
+graficoPAMk3
+
+
+table(mediod_clusterk3$clustering, datosClusterScaled$classification)
+
+
+#################
+# Jerarquico
+##################
+res.agnes <- agnes(x = datosClusterScaled[,c(17,21)], #data frame
+                   stand = FALSE, #Standardize the Data 
+                   metric = "euclidiean", # Metric for Distance
+                   method = "ward") #Linkage Method 
+ 
+
+fviz_dend(res.agnes, cex = 0.6, k = 3, type = "circular", rect = TRUE)
+
+#############
+# K means
+############
+set.seed(123) 
+km.res <- kmeans(datosFiltrados[c(1,17:21)], 
+                 centers = 3, iter.max = 250, nstart =25) 
+
+# grafico
+fviz_cluster(km.res, data = datosClusterScaled[c(1,17:21)], 
+             stand = FALSE, geom = c("point", "text"),
+             repel = TRUE, ellipse.type = "confidence", ellipse.level = 0.95,
+             main = "Swiss Cluster Plot", ggtheme = theme_classic())
+
+table(km.res$clustering, datosClusterScaled$classification)
