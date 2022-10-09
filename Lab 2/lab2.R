@@ -282,19 +282,19 @@ distanciaMediodMatrix <- as.matrix(distanciaMediod)
 # Método del codo
 codoPlot <- fviz_nbclust(distanciaMediodMatrix, pam, method = "wss")
 plot(codoPlot)
-kCodo <- 4
+kCodoMatrix <- 4
 # K óptimo = 4
 
 # Método de la silueta
 siluetaPlot <- fviz_nbclust(distanciaMediodMatrix, pam, method = "silhouette")
 plot(siluetaPlot)
-kSilueta <- 6
+kSiluetaMatrix <- 6
 
 # Obtención de clustering
 
 # K del Método del codo
 set.seed(123) 
-pamCodo <- pam(distanciaMediodMatrix, k = kCodo)
+pamCodo <- pam(distanciaMediodMatrix, k = kCodoMatrix)
 #Gráfico
 graficoClusterCodo <- fviz_cluster(pamCodo,
              ellipse.type = "norm", 
@@ -306,7 +306,7 @@ table(pamCodo$clustering, clasificacion)
 
 # K del Método de la silueta
 set.seed(123) 
-pamSilueta <- pam(distanciaMediodMatrix, k = kSilueta)
+pamSilueta <- pam(distanciaMediodMatrix, k = kSiluetaMatrix)
 #Gráfico
 graficoClusterSilueta <-fviz_cluster(pamSilueta, 
              ellipse.type = "norm", 
