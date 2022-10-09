@@ -308,12 +308,87 @@ table(pamCodo$clustering, clasificacion)
 set.seed(123) 
 pamSilueta <- pam(distanciaMediodMatrix, k = kSiluetaMatrix)
 #Gráfico
-graficoClusterSilueta <-fviz_cluster(pamSilueta, 
-             ellipse.type = "norm", 
+graficoClusterSilueta <- fviz_cluster(pamSilueta, 
+             ellipse.type = "norm",
+             main = "Clustering de datos OHE con k = 6",
              show.clust.cent = TRUE,star.plot = TRUE)
 plot(graficoClusterSilueta)
 #Tabla
-table(pamSilueta$clustering, clasificacion)
+table(pamSilueta$clustering, datosClusterMix$sex)
+
+##################################################
+# Analisis de datos
+##################################################
+
+# Codo
+
+resumenCodo <- datosClusterMix %>%
+  mutate(cluster = pamCodo$clustering) %>%
+  mutate(age = datosFiltrados$age) %>%
+  mutate(TSH = datosFiltrados$TSH) %>%
+  mutate(T3 = datosFiltrados$T3) %>%
+  mutate(TT4 = datosFiltrados$TT4) %>%
+  mutate(T4U = datosFiltrados$T4U) %>%
+  mutate(FTI = datosFiltrados$FTI) %>%
+  mutate(clasificacion = as.factor(clasificacion)) %>%
+  group_by(cluster) %>%
+  do(the_summary = summary(.))
+resumenCodo$the_summary
 
 
+resumenSilueta <- datosClusterMix %>%
+  mutate(cluster = pamSilueta$clustering) %>%
+  mutate(age = datosFiltrados$age) %>%
+  mutate(TSH = datosFiltrados$TSH) %>%
+  mutate(T3 = datosFiltrados$T3) %>%
+  mutate(TT4 = datosFiltrados$TT4) %>%
+  mutate(T4U = datosFiltrados$T4U) %>%
+  mutate(FTI = datosFiltrados$FTI) %>%
+  mutate(clasificacion = as.factor(clasificacion)) %>%
+  group_by(cluster) %>%
+  do(the_summary = summary(.))
+
+resumenSilueta$the_summary
+
+
+
+
+
+
+
+###################################
+#EXPERIMENTACIÓN
+####################################
+set.seed(123) 
+kmExp <- kmeans(datosClusterNumeric, 
+                    centers = 3, iter.max = 250, nstart =25) 
+# Gráfico
+fviz_cluster(kmExp, data = datosClusterNumeric, 
+             repel = TRUE,
+             main = "Clustering con datos numéricos k = 3", 
+             ggtheme = theme_classic())
+####################################
+resumenKmeansExp <- datosClusterNumeric %>%
+  mutate(cluster = kmExp$cluster) %>%
+  mutate(age = datosFiltrados$age) %>%
+  mutate(TSH = datosFiltrados$TSH) %>%
+  mutate(T3 = datosFiltrados$T3) %>%
+  mutate(TT4 = datosFiltrados$TT4) %>%
+  mutate(T4U = datosFiltrados$T4U) %>%
+  mutate(FTI = datosFiltrados$FTI) %>%
+  mutate(clasificacion = as.factor(clasificacion)) %>%
+  group_by(cluster) %>%
+  do(the_summary = summary(.))
+
+resumenKmeansExp$the_summary
+
+t<- table(kmExp$cluster, clasificacion)
+#Compensados 
+t[,1]/sum(t[,1]) *100
+#Negativos
+t[,2]/sum(t[,2]) *100
+#Primario
+t[,3]/sum(t[,3]) *100
+#Secundario
+t[,4]/sum(t[,4]) *100
 
