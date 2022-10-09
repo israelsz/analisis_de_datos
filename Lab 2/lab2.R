@@ -75,8 +75,7 @@ datosFiltrados <- datos %>% select(-c("TSH_measured",
                              "FTI_measured", 
                              "TBG_measured",
                              "TBG",
-                             "referral_source",
-                             "classification"))
+                             "referral_source"))
 
 # Grafico de data faltante
 aggr_plot <- aggr(datosFiltrados, 
@@ -105,9 +104,6 @@ datosFiltrados <- datosFiltrados[(datosFiltrados$age<100),]
 
 # Imputación de datos:
 
-# Se convierten los datos de caracteres a factores
-datosFiltrados <- datosFiltrados %>% mutate_if(is.character,as.factor)
-
 # Se hace imputación de los datos usando predictive mean matching
 
 datosNA <- datosFiltrados[ ,c(1,17:21)]
@@ -127,6 +123,9 @@ datosFiltrados$TT4 <- datosNA$TT4
 datosFiltrados$T4U <- datosNA$T4U
 datosFiltrados$FTI <- datosNA$FTI
 
+# Se almacena la clasificacion
+clasificacion <- datosFiltrados$classification
+datosFiltrados$classification <- NULL
 # Se escalan los datos
 
 datosClusterScaled <- datosFiltrados
@@ -136,6 +135,34 @@ datosClusterScaled$TT4 <- scale(datosClusterScaled$TT4)[,1]
 datosClusterScaled$T3 <- scale(datosClusterScaled$T3)[,1]
 datosClusterScaled$T4U <- scale(datosClusterScaled$T4U)[,1]
 datosClusterScaled$FTI <- scale(datosClusterScaled$FTI)[,1]
+
+##########################################################
+# Datasets utilizados
+##########################################################
+
+# One hot encoding
+datosClusterOHE <- datosClusterScaled
+
+# Se convierten las variables no numericas a 1,0
+datosClusterOHE[datosClusterOHE == "t" | 
+                        datosClusterOHE == "M"] <- 1
+datosClusterOHE[datosClusterOHE == "f" | 
+                        datosClusterOHE == "F"] <- 0
+
+# Se convierten las variables a numericas
+datosClusterOHE <- datosClusterOHE %>%
+  mutate_if(is.character,as.numeric)
+
+
+# Mixto
+datosClusterMix <- datosClusterScaled
+# Se convierten las variables a factores
+datosClusterMix <- datosClusterMix %>%
+  mutate_if(is.character,as.factor)
+
+# Solo numéricas
+datosClusterNumeric <- datosClusterScaled %>% select(c(1,17:21))
+
 
 ##############################################################################
 #                     Clustering
