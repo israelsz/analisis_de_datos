@@ -168,179 +168,152 @@ datosClusterNumeric <- datosClusterScaled %>% select(c(1,17:21))
 #                     Clustering
 ##############################################################################
 
-##########################
-# Metodo con K-prototype
-#########################
+#################################
+# Numericas
 
-####################
-# Obtencion K optimo
-####################
-# Metodo del Codo
-wss<-vector()
-for (i in 2:15){
-set.seed(155)
-wss[i] <- sum(kproto(datosClusterScaled, i, verbose = FALSE)$withinss)
-}
+###########
+# K means #
+###########
 
-gProtoCodo<- plot(1:15, wss, type="b", xlab="Numero de Clusters",
-     ylab="Within groups sum of squares",
-     main="K optimo con el método del Codo",
-     pch=20, cex=2)
+# Cálculo de los k óptimos
 
-# El metodo del codo indica que optimo seria k = 5
+#Metodo del codo
+resCodo <- fviz_nbclust(datosClusterNumeric, kmeans, method='wss')
+plot(resCodo)
+kCodo <- 5
+# K óptimo = 5
 
-# Metodo de la silueta
-siluetaProto <- vector()
-for(i in 2:15){
-  set.seed(86)
-  kpres <- kproto(datosClusterScaled, k = i,na.rm=FALSE, verbose = FALSE)
-  valor_sil<-validation_kproto(method = "silhouette", object=kpres)
-  siluetaProto[i] <- valor_sil
-}
-gProtoSil <- plot(1:15, siluetaProto, type = "b", ylab = "Silhouette", 
-     xlab = "Numero de Clusters", 
-     main = "K optimo con método de la Silueta")
-# El metodo de la silueta arroja un optimo de 3
-
-####################
-# Generación de Clusters
-####################
-# Cluster con k = 3
-set.seed(86)
-protoClusterk3 <- kproto(datosClusterScaled, 3, verbose = FALSE, nstart = 25)
+#Método de la Silueta
+resSil <- fviz_nbclust(datosClusterNumeric, kmeans, method = "silhouette")
+plot(resSil)
+kSilueta <- 2
+#K óptimo = 2
 
 
-# Cluster con k = 5
-set.seed(86)
-protoClusterk5 <- kproto(datosClusterScaled, 5, verbose = FALSE, nstart = 25)
+# Obtención de clustering
 
-############################
-# Resultados e interpretación
-############################
-
-summary(protoClusterk3)
-summary(protoClusterk5)
-
-table(protoClusterk3$cluster, datosFiltrados$classification)
-table(protoClusterk4$cluster, datosFiltrados$classification)
-
-#clprofiles(protoClusterk3, datosClusterScaled) #graficos
-#clprofiles(protoClusterk5, datosClusterScaled) #graficos
-
-
-##########################
-# Metodo con K-mediodes PAM K=3
-#########################
-
-# Calculo de la distancia de gower
-set.seed(4) 
-
-distanciaMediod <- daisy(datosClusterScaled, metric = "gower")
-
-#Cluster con k = 3
-mediod_clusterk3 <- pam(distanciaMediod, diss = TRUE, k = 3)
-
-#Grafico
-#tsne_c <- Rtsne(distanciaMediod, is_distance = TRUE)
-#graficoPAMk3 <- ggplot(data.frame(tsne_c$Y), 
-#                       aes(x = X1, y = X2)) + 
-#        labs(x = "Dim1", y = "Dim2", title = "Cluster PAM k=3") + 
-#        geom_point(color = factor(mediod_clusterk3$clustering))
-
-#graficoPAMk3
-
-
-tablon <- table(mediod_clusterk3$clustering, datosClusterScaled$classification)
-
-
-#################
-# Jerarquico
-##################
-res.agnes <- agnes(x = datosClusterScaled[,c(17,21)], #data frame
-                   stand = FALSE, #Standardize the Data 
-                   metric = "euclidiean", # Metric for Distance
-                   method = "ward") #Linkage Method 
- 
-
-fviz_dend(res.agnes, cex = 0.6, k = 3, type = "circular", rect = TRUE)
-
-#############
-# K means
-############
+# K del Método del codo
 set.seed(123) 
-km.res <- kmeans(datosFiltrados[c(1,17:21)], 
-                 centers = 3, iter.max = 250, nstart =25) 
-
-# grafico
-fviz_cluster(km.res, data = datosClusterScaled[c(1,17:21)], 
-             stand = FALSE, geom = c("point", "text"),
-             repel = TRUE, ellipse.type = "confidence", ellipse.level = 0.95,
-             main = "Swiss Cluster Plot", ggtheme = theme_classic())
-
-table(km.res$clustering, datosClusterScaled$classification)
-
-############
-# Kamila
-############
-datosCategoricos <- datosClusterScaled[,c(2:16,22)]
-datosNumericos <- datosClusterScaled[,c(1,17:21)]
-clusterKamila <- kamila(datosNumericos, datosCategoricos, 3, 30)
+kmCodo <- kmeans(datosClusterNumeric, 
+                 centers = kCodo, iter.max = 250, nstart =25) 
+# Gráfico
+fviz_cluster(kmCodo, data = datosClusterNumeric, 
+             repel = TRUE,
+             main = "Clustering de datos numéricos con k = 5", 
+             ggtheme = theme_classic())
+# Tabla
+table(kmCodo$cluster, clasificacion)
 
 
-#################
-# Jerarquico 2
-##################
-# Dissimilarity matrix
-d <- dist(datosClusterScaled[,c(17,21)], method = "euclidean")
-# Hierarchical clustering using Complete Linkage
-hc1 <- hclust(d, method = "complete" )
-# Plot the obtained dendrogram
-plot(hc1, cex = 0.6, hang = -1)
-
-#Formar cluster
-clust <- cutree(hc1, k = 3)
-fviz_cluster(list(data = datosClusterScaled[,c(17,21)], cluster = clust))  ## from ‘factoextra’ package 
+# K del Método de la silueta
+set.seed(123) 
+kmSilueta <- kmeans(datosClusterNumeric, 
+                 centers = kSilueta, iter.max = 250, nstart =25) 
+# Gráfico
+fviz_cluster(kmSilueta, data = datosClusterNumeric, 
+             repel = TRUE,
+             main = "Clustering con datos numéricos k = 2", 
+             ggtheme = theme_classic())
+# Tabla
+table(kmSilueta$cluster, clasificacion)
 
 
-pltree(hc1, hang=-1, cex = 0.6)
-rect.hclust(hc1, k = 3, border = 2:10)
+################################################
+# One hot encoding
 
-#OTRO CLUSTER
-#Ward’s method gets us the highest agglomerative coefficient. Let us look at its dendogram.
-hc3 <- agnes(datosClusterScaled[,c(17,21)], method = "ward")
+###########
+# K means #
+###########
 
-# Dendograma con clases
-pltree(hc3, cex = 0.6, hang = -1, main = "Dendrogram of agnes")
-rect.hclust(hc3, k = 3, border = 2:10) 
+# Cálculo de los k óptimos
 
-clust3 <- cutree(hc3, k = 3)
-# Grafico bonito
-fviz_cluster(list(data = datosClusterScaled[,c(17,21)], cluster = clust3))  ## from ‘factoextra’ package 
+#Metodo del codo
+resCodo <- fviz_nbclust(datosClusterOHE, kmeans, method='wss')
+plot(resCodo)
+kCodo <- 5
+# K óptimo = 5
 
-datosClusterScaled <- mutate(datosClusterScaled, cluster = clust3)
-count(datosClusterScaled, cluster)
+#Método de la Silueta
+resSil <- fviz_nbclust(datosClusterOHE, kmeans, method = "silhouette")
+plot(resSil)
+kSilueta <- 2
+#K óptimo = 2
 
-## Otro cluster mas
-# Finding distance matrix
-distance_mat <- dist(datosClusterScaled[,c(17,21)], method = 'euclidean')
-#distance_mat
 
-# Fitting Hierarchical clustering Model
-# to training dataset
-set.seed(240)  # Setting seed
-Hierar_cl <- hclust(distance_mat, method = "average")
-#Hierar_cl
+# Obtención de clustering
 
-# Plotting dendrogram
-plot(Hierar_cl)
+# K del Método del codo
+set.seed(123) 
+kmCodo <- kmeans(datosClusterOHE, 
+                 centers = kCodo, iter.max = 250, nstart =25) 
+# Gráfico
+fviz_cluster(kmCodo, data = datosClusterOHE, 
+             repel = TRUE,
+             main = "Clustering de datos OHE con k = 5", 
+             ggtheme = theme_classic())
+# Tabla
+table(kmCodo$cluster, clasificacion)
 
-# Choosing no. of clusters
-# Cutting tree by height
-abline(h = 110, col = "green")
 
-# Cutting tree by no. of clusters
-fit <- cutree(Hierar_cl, k = 3 )
-fit
+# K del Método de la silueta
+set.seed(123) 
+kmSilueta <- kmeans(datosClusterOHE, 
+                    centers = kSilueta, iter.max = 250, nstart =25) 
+# Gráfico
+fviz_cluster(kmSilueta, data = datosClusterOHE, 
+             repel = TRUE,
+             main = "Clustering de datos OHE con k = 2", 
+             ggtheme = theme_classic())
+# Tabla
+table(kmSilueta$cluster, clasificacion)
 
-table(fit)
-rect.hclust(Hierar_cl, k = 3, border = "green")
+############################################
+# Mixto
+
+##############
+# K-mediodes #
+##############
+# Cálculo de matriz de distancia
+distanciaMediod <- daisy(datosClusterMix, metric = "gower")
+distanciaMediodMatrix <- as.matrix(distanciaMediod)
+
+# Cálculo de los k óptimos
+
+# Método del codo
+codoPlot <- fviz_nbclust(distanciaMediodMatrix, pam, method = "wss")
+plot(codoPlot)
+kCodo <- 4
+# K óptimo = 4
+
+# Método de la silueta
+siluetaPlot <- fviz_nbclust(distanciaMediodMatrix, pam, method = "silhouette")
+plot(siluetaPlot)
+kSilueta <- 6
+
+# Obtención de clustering
+
+# K del Método del codo
+set.seed(123) 
+pamCodo <- pam(distanciaMediodMatrix, k = kCodo)
+#Gráfico
+graficoClusterCodo <- fviz_cluster(pamCodo,
+             ellipse.type = "norm", 
+             show.clust.cent = TRUE,star.plot = TRUE)
+plot(graficoClusterCodo)
+#Tabla
+table(pamCodo$clustering, clasificacion)
+
+
+# K del Método de la silueta
+set.seed(123) 
+pamSilueta <- pam(distanciaMediodMatrix, k = kSilueta)
+#Gráfico
+graficoClusterSilueta <-fviz_cluster(pamSilueta, 
+             ellipse.type = "norm", 
+             show.clust.cent = TRUE,star.plot = TRUE)
+plot(graficoClusterSilueta)
+#Tabla
+table(pamSilueta$clustering, clasificacion)
+
+
+
