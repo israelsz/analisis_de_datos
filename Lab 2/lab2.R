@@ -8,49 +8,34 @@ if(!require(factoextra)){
   require(factoextra)
 }
 
-if(!require(FactoMineR)){
-  install.packages("FactoMineR",dependencies = TRUE)
-  require(FactoMineR)
-}
-
-if(!require(klaR)){
-  install.packages("klaR",dependencies = TRUE)
-  require(klaR)
-}
-
-if(!require(kamila)){
-  install.packages("kamila",dependencies = TRUE)
-  require(kamila)
-}
-
 if(!require(dplyr)){
   install.packages("dplyr",dependencies = TRUE)
   require(dplyr)
 }
 
-if(!require(clustMixType)){
-  install.packages("clustMixType",dependencies = TRUE)
-  require(clustMixType)
+
+if(!require(mice)){
+  install.packages("mice",dependencies = TRUE)
+  require(mice)
 }
 
-if(!require(Rtsne)){
-  install.packages("Rtsne",dependencies = TRUE)
-  require(Rtsne)
+if(!require(VIM)){
+  install.packages("VIM",dependencies = TRUE)
+  require(VIM)
 }
-
 
 # Se carga el archivo de datos CSV
 datos <- read.csv(file.choose(new = FALSE), header = FALSE, sep=",")
 
 #Se agregan los nombres de header
-colnames(datos) <- c("age", "sex", "on thyroxine", "query on thyroxine",
-                     "on antithyroid medication", "sick", "pregnant",
-                     "thyroid surgery", "I131 treatment", "query hypothyroid",
-                     "query hyperthyroid", "lithium", "goitre", "tumor",
-                     "hypopituitary", "psych", "TSH measured", "TSH",
-                     "T3 measured", "T3", "TT4 measured", "TT4",
-                     "T4U measured", "T4U", "FTI measured", "FTI",
-                     "TBG measured", "TBG", "referral source", "classification")
+colnames(datos) <- c("age", "sex", "on_thyroxine", "query_on_thyroxine",
+                     "on_antithyroid_medication", "sick", "pregnant",
+                     "thyroid_surgery", "I131_treatment", "query_hypothyroid",
+                     "query_hyperthyroid", "lithium", "goitre", "tumor",
+                     "hypopituitary", "psych", "TSH_measured", "TSH",
+                     "T3_measured", "T3", "TT4_measured", "TT4",
+                     "T4U_measured", "T4U", "FTI_measured", "FTI",
+                     "TBG_measured", "TBG", "referral_source", "classification")
 
 #Se elimina el id del paciente de la columna de classificación
 aux<- c()
@@ -60,6 +45,8 @@ for(i in datos$classification){
 # Se agrega la clasificación como una columna aparte
 datos$classification <- aux
 
+# Se reemplazas los ? por NA's
+datos <- datos %>% dplyr::na_if("?")
 
 ############################################################################
 #                   Pre-procesamiento de datos
@@ -72,64 +59,76 @@ datos$classification <- aux
 #información completa que podría afectar en el análisis posterior.
 
 
-# Se filtran los datos, seleccionando las columnas en las cuales se encuentren
-# la edad, sexo y las distintas mediciones registradas
-datosFiltrados <- datos[(datos$age!="?" & datos$sex != "?" & 
-                           datos[["TSH measured"]] =="t" & 
-                           datos[["T3 measured"]] == "t" & 
-                           datos[["TT4 measured"]] == "t" & 
-                           datos[["T4U measured"]] == "t" & 
-                           datos[["FTI measured"]] == "t"),]
-
 # Se convierten los datos continuos a numericos
-datosFiltrados$age <- as.numeric(datosFiltrados$age)
-datosFiltrados$TSH <- as.numeric(datosFiltrados$TSH)
-datosFiltrados$TT4 <- as.numeric(datosFiltrados$TT4)
-datosFiltrados$T4U <- as.numeric(datosFiltrados$T4U)
-datosFiltrados$FTI <- as.numeric(datosFiltrados$FTI)
-datosFiltrados$T3 <- as.numeric(datosFiltrados$T3)
+datos$age <- as.numeric(datos$age)
+datos$TSH <- as.numeric(datos$TSH)
+datos$TT4 <- as.numeric(datos$TT4)
+datos$T4U <- as.numeric(datos$T4U)
+datos$FTI <- as.numeric(datos$FTI)
+datos$T3 <- as.numeric(datos$T3)
 
-# Criterios de filtración de datos atípicos:
 
-# Al observar una muestra con edad de 455, 
-# se decide filtrar por edades menores a 100
+datosFiltrados <- datos %>% select(-c("TSH_measured", 
+                             "T3_measured", 
+                             "TT4_measured", 
+                             "T4U_measured",
+                             "FTI_measured", 
+                             "TBG_measured",
+                             "TBG",
+                             "referral_source",
+                             "classification"))
+
+# Grafico de data faltante
+aggr_plot <- aggr(datosFiltrados, 
+                  col=c('cadetblue1','red'),
+                  numbers=TRUE,
+                  sortVars=TRUE,
+                  labels=names(datosFiltrados), 
+                  cex.axis=.90,
+                  ylab=c("Histograma de data faltante","Patrón"),
+                  gap = 0.5,
+                  oma = c(10,5,5,2),
+                  cex.numbers = 0.70)
+
+# Por regla, las columnas con 5% menos de data faltante, se borran
+# sus observaciones con NA, las columnas con mas de 5% de data faltante se
+# recomienda su imputación
+
+#Se eliminan las observaciones que tienen menos de 5% de los datos
+# en este caso, corresponden a las variables sex y age
+datosFiltrados <- datosFiltrados[!is.na(datosFiltrados$age), ]
+datosFiltrados <- datosFiltrados[!is.na(datosFiltrados$sex), ]
+
+# Ademas se decide el limitar la edad a 100, debido a la observación de un dato
+# atipico con edad 455
 datosFiltrados <- datosFiltrados[(datosFiltrados$age<100),]
 
-# Debido a que solo se tiene una muestra bajo la clase de hipotiroidismo 
-# secundario, se decide eliminarla debido a que no se podrá obtener
-# información de ella.
-datosFiltrados <- datosFiltrados %>% 
-  filter(classification != "secondary hypothyroid")
+# Imputación de datos:
 
-datosFiltrados$classification <- as.factor(datosFiltrados$classification)
-
-# Se convierten todas variables no numericas a factores
+# Se convierten los datos de caracteres a factores
 datosFiltrados <- datosFiltrados %>% mutate_if(is.character,as.factor)
 
+# Se hace imputación de los datos usando predictive mean matching
 
-# Change box plot colors by groups
-p<-ggplot(datosFiltrados, aes(x=classification, y=TSH, fill=classification)) +
-  geom_boxplot()
-p
+datosNA <- datosFiltrados[ ,c(1,17:21)]
+datosNA <- mice(datosNA, 
+            method = "pmm",
+            m = 5, 
+            seed = 754)
 
-# Finalmente se decide por eliminar las columnas “measured” que indican si fue
-# tomada la medición de la hormona que indica, debido a que con el filtro actual
-# de datos todas corresponden al valor de true, por lo que esas columnas no
-# aportan información, además se elimina la columna de TBG measured y TBG 
-# debido a que para ninguna muestra fue medida, por lo que
-# tampoco aportan información.
+# Se guardan los datos
+datosNA <- complete(datosNA)
 
-datosFiltrados <- datosFiltrados %>% select(-c("TSH measured", 
-                                               "T3 measured", 
-                                               "TT4 measured", 
-                                               "T4U measured",
-                                               "FTI measured", 
-                                               "TBG measured",
-                                               "TBG",
-                                               "referral source"))
+# Se incorporan las columnas inputadas al dataset original
+datosFiltrados$age <- datosNA$age
+datosFiltrados$TSH <- datosNA$TSH
+datosFiltrados$T3 <- datosNA$T3
+datosFiltrados$TT4 <- datosNA$TT4
+datosFiltrados$T4U <- datosNA$T4U
+datosFiltrados$FTI <- datosNA$FTI
 
-#datosCluster <- datosFiltrados
-#datosCluster <- datosFiltrados %>% select(-c("classification"))
+# Se escalan los datos
+
 datosClusterScaled <- datosFiltrados
 datosClusterScaled$age <- scale(datosClusterScaled$age)[,1]
 datosClusterScaled$TSH <- scale(datosClusterScaled$TSH)[,1]
@@ -207,22 +206,24 @@ table(protoClusterk4$cluster, datosFiltrados$classification)
 #########################
 
 # Calculo de la distancia de gower
+set.seed(4) 
+
 distanciaMediod <- daisy(datosClusterScaled, metric = "gower")
 
 #Cluster con k = 3
 mediod_clusterk3 <- pam(distanciaMediod, diss = TRUE, k = 3)
 
 #Grafico
-tsne_c <- Rtsne(distanciaMediod, is_distance = TRUE)
-graficoPAMk3 <- ggplot(data.frame(tsne_c$Y), 
-                       aes(x = X1, y = X2)) + 
-        labs(x = "Dim1", y = "Dim2", title = "Cluster PAM k=3") + 
-        geom_point(color = factor(mediod_clusterk3$clustering))
+#tsne_c <- Rtsne(distanciaMediod, is_distance = TRUE)
+#graficoPAMk3 <- ggplot(data.frame(tsne_c$Y), 
+#                       aes(x = X1, y = X2)) + 
+#        labs(x = "Dim1", y = "Dim2", title = "Cluster PAM k=3") + 
+#        geom_point(color = factor(mediod_clusterk3$clustering))
 
-graficoPAMk3
+#graficoPAMk3
 
 
-table(mediod_clusterk3$clustering, datosClusterScaled$classification)
+tablon <- table(mediod_clusterk3$clustering, datosClusterScaled$classification)
 
 
 #################
@@ -250,3 +251,69 @@ fviz_cluster(km.res, data = datosClusterScaled[c(1,17:21)],
              main = "Swiss Cluster Plot", ggtheme = theme_classic())
 
 table(km.res$clustering, datosClusterScaled$classification)
+
+############
+# Kamila
+############
+datosCategoricos <- datosClusterScaled[,c(2:16,22)]
+datosNumericos <- datosClusterScaled[,c(1,17:21)]
+clusterKamila <- kamila(datosNumericos, datosCategoricos, 3, 30)
+
+
+#################
+# Jerarquico 2
+##################
+# Dissimilarity matrix
+d <- dist(datosClusterScaled[,c(17,21)], method = "euclidean")
+# Hierarchical clustering using Complete Linkage
+hc1 <- hclust(d, method = "complete" )
+# Plot the obtained dendrogram
+plot(hc1, cex = 0.6, hang = -1)
+
+#Formar cluster
+clust <- cutree(hc1, k = 3)
+fviz_cluster(list(data = datosClusterScaled[,c(17,21)], cluster = clust))  ## from ‘factoextra’ package 
+
+
+pltree(hc1, hang=-1, cex = 0.6)
+rect.hclust(hc1, k = 3, border = 2:10)
+
+#OTRO CLUSTER
+#Ward’s method gets us the highest agglomerative coefficient. Let us look at its dendogram.
+hc3 <- agnes(datosClusterScaled[,c(17,21)], method = "ward")
+
+# Dendograma con clases
+pltree(hc3, cex = 0.6, hang = -1, main = "Dendrogram of agnes")
+rect.hclust(hc3, k = 3, border = 2:10) 
+
+clust3 <- cutree(hc3, k = 3)
+# Grafico bonito
+fviz_cluster(list(data = datosClusterScaled[,c(17,21)], cluster = clust3))  ## from ‘factoextra’ package 
+
+datosClusterScaled <- mutate(datosClusterScaled, cluster = clust3)
+count(datosClusterScaled, cluster)
+
+## Otro cluster mas
+# Finding distance matrix
+distance_mat <- dist(datosClusterScaled[,c(17,21)], method = 'euclidean')
+#distance_mat
+
+# Fitting Hierarchical clustering Model
+# to training dataset
+set.seed(240)  # Setting seed
+Hierar_cl <- hclust(distance_mat, method = "average")
+#Hierar_cl
+
+# Plotting dendrogram
+plot(Hierar_cl)
+
+# Choosing no. of clusters
+# Cutting tree by height
+abline(h = 110, col = "green")
+
+# Cutting tree by no. of clusters
+fit <- cutree(Hierar_cl, k = 3 )
+fit
+
+table(fit)
+rect.hclust(Hierar_cl, k = 3, border = "green")
