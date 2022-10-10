@@ -58,7 +58,6 @@ datos <- datos %>% dplyr::na_if("?")
 # Estas variables incompletas serán eliminadas debido a no aportar la 
 #información completa que podría afectar en el análisis posterior.
 
-
 # Se convierten los datos continuos a numericos
 datos$age <- as.numeric(datos$age)
 datos$TSH <- as.numeric(datos$TSH)
@@ -162,6 +161,34 @@ datosClusterMix <- datosClusterMix %>%
 
 # Solo numéricas
 datosClusterNumeric <- datosClusterScaled %>% select(c(1,17:21))
+
+
+# Diagramas de caja
+dataPlot <- datosFiltrados
+dataPlot$classification <- clasificacion
+
+pTSH<-ggplot(datosFiltrados, aes(x=clasificacion, y=TSH, fill=clasificacion)) +
+  geom_boxplot() + theme(legend.position="none") + coord_flip()
+pTSH
+
+pT3<-ggplot(datosFiltrados, aes(x=clasificacion, y=T3, fill=clasificacion)) +
+  geom_boxplot() + theme(legend.position="none") + coord_flip()
+pT3
+
+pTT4<-ggplot(datosFiltrados, aes(x=clasificacion, y=TT4, fill=clasificacion)) +
+  geom_boxplot() + theme(legend.position="none") + coord_flip()
+pTT4
+
+pT4U<-ggplot(datosFiltrados, aes(x=clasificacion, y=T4U, fill=clasificacion)) +
+  geom_boxplot() + theme(legend.position="none") + coord_flip()
+pT4U
+
+pFTI<-ggplot(datosFiltrados, aes(x=clasificacion, y=FTI, fill=clasificacion)) +
+  geom_boxplot() + theme(legend.position="none") + coord_flip()
+pFTI
+
+
+
 
 
 ##############################################################################
@@ -298,7 +325,8 @@ pamCodo <- pam(distanciaMediodMatrix, k = kCodoMatrix)
 #Gráfico
 graficoClusterCodo <- fviz_cluster(pamCodo,
              ellipse.type = "norm", 
-             show.clust.cent = TRUE,star.plot = TRUE)
+             show.clust.cent = TRUE,star.plot = TRUE,
+             main = "Cluster categórico con gower K=4")
 plot(graficoClusterCodo)
 #Tabla
 table(pamCodo$clustering, clasificacion)
@@ -308,10 +336,10 @@ table(pamCodo$clustering, clasificacion)
 set.seed(123) 
 pamSilueta <- pam(distanciaMediodMatrix, k = kSiluetaMatrix)
 #Gráfico
-graficoClusterSilueta <- fviz_cluster(pamSilueta, 
-             ellipse.type = "norm",
-             main = "Clustering de datos OHE con k = 6",
-             show.clust.cent = TRUE,star.plot = TRUE)
+graficoClusterSilueta <-fviz_cluster(pamSilueta, 
+             ellipse.type = "norm", 
+             show.clust.cent = TRUE,star.plot = TRUE,
+             main = "Cluster categórico con gower K=6")
 plot(graficoClusterSilueta)
 #Tabla
 table(pamSilueta$clustering, datosClusterMix$sex)
