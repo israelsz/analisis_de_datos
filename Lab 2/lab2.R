@@ -385,7 +385,7 @@ resumenSilueta$the_summary
 
 
 ###################################
-#EXPERIMENTACIÓN
+# Cluster K-means| K = 3
 ####################################
 set.seed(123) 
 kmExp <- kmeans(datosClusterNumeric, 
@@ -408,8 +408,9 @@ resumenKmeansExp <- datosClusterNumeric %>%
   group_by(cluster) %>%
   do(the_summary = summary(.))
 
-resumenKmeansExp$the_summary
+resumenKmeansExp$the_summary #Imprimir resumen de variables
 
+# Calculo de porcentaje de las clases
 t<- table(kmExp$cluster, clasificacion)
 #Compensados 
 t[,1]/sum(t[,1]) *100
