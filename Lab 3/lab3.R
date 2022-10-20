@@ -142,4 +142,84 @@ datosFiltrados$T3 <- cut(datosFiltrados$T3, t3_valores, rango_nombres)
 datosFiltrados$TT4 <- cut(datosFiltrados$TT4, tt4_valores, rango_nombres)
 datosFiltrados$T4U <- cut(datosFiltrados$T4U, t4u_valores, rango_nombres)
 datosFiltrados$FTI <- cut(datosFiltrados$FTI, fti_valores, rango_nombres)
+
+# Se elimina la columna hypopituitary, debido a que no tiene varianza
+# practicamente
+datosFiltrados$hypopituitary <- NULL
+
 ###############################################################################
+#                    Reglas para clase positiva
+###############################################################################
+
+reglas_positivas = apriori(
+  data = datosFiltrados, 
+  parameter=list(support = 0.01, confidence = 0.8, minlen = 3, maxlen = 17, 
+                 target="rules"),
+  appearance=list(rhs = c("classification=positive"))
+)
+
+# Se filtran solo reglas con lift mayor a uno
+subReglas_positivas <-reglas_positivas[quality(reglas_positivas)$lift > 1]
+
+
+# Se filtran las diez mejores reglas, ordenadas por su valor de lift
+reglas_positivas_por_lift <- head(subReglas_positivas, n = 10, by = "lift")
+# Muestra las reglas
+inspect(reglas_positivas_por_lift)
+
+# Se filtran las diez mejores reglas, ordenadas por su valor de confianza
+reglas_positivas_por_confianza <- head(subReglas_positivas, n = 5,
+                                       by = "confidence")
+inspect(reglas_positivas_por_confianza)
+
+###############################################################################
+#                    Reglas para clase negativa
+###############################################################################
+
+lista <- c("classification=negative")
+
+reglas_negativas = apriori(
+  data = datosFiltrados, 
+  parameter=list(support = 0.3, confidence = 0.8, minlen = 3, maxlen = 17, 
+                 target="rules"),
+  appearance=list(rhs = lista)
+)
+
+# Se filtran solo reglas con lift mayor a uno
+subReglas_negativas <-reglas_negativas[quality(reglas_negativas)$lift > 1]
+
+# Se filtran las diez mejores reglas, ordenadas por su valor de lift
+reglas_negativas_por_lift <- head(subReglas_negativas, n = 10, by = "lift")
+inspect(reglas_negativas_por_lift)
+
+# Se filtran las diez mejores reglas, ordenadas por su valor de confianza
+reglas_negativas_por_confianza <- head(subReglas_negativas, n = 10,
+                                       by = "confidence")
+inspect(reglas_negativas_por_confianza)
+
+###############################################################################
+#                    Reglas para Variable
+###############################################################################
+
+reglas_TSH = apriori(
+  data = datosFiltrados[,c(1:20)], 
+  parameter=list(support = 0.01, confidence = 0.5, minlen = 3, maxlen = 17, 
+                 target="rules"),
+  appearance=list(rhs = c("TSH=Alta"))
+)
+
+# Se filtran solo reglas con lift mayor a uno
+subReglas_TSH <-reglas_TSH[quality(reglas_TSH)$lift > 1]
+
+
+# Se filtran las diez mejores reglas, ordenadas por su valor de lift
+reglas_TSH_por_lift <- head(subReglas_TSH, n = 10, by = "lift")
+# Muestra las reglas
+inspect(reglas_TSH_por_lift)
+
+# Se filtran las diez mejores reglas, ordenadas por su valor de confianza
+reglas_TSH_por_confianza <- head(subReglas_TSH, n = 5,
+                                       by = "confidence")
+inspect(reglas_TSH_por_confianza)
+
+
