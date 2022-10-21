@@ -198,7 +198,7 @@ reglas_negativas_por_confianza <- head(subReglas_negativas, n = 10,
 inspect(reglas_negativas_por_confianza)
 
 ###############################################################################
-#                    Reglas para Variable
+#                    Reglas para Variable TSH
 ###############################################################################
 
 reglas_TSH = apriori(
@@ -218,8 +218,134 @@ reglas_TSH_por_lift <- head(subReglas_TSH, n = 10, by = "lift")
 inspect(reglas_TSH_por_lift)
 
 # Se filtran las diez mejores reglas, ordenadas por su valor de confianza
-reglas_TSH_por_confianza <- head(subReglas_TSH, n = 5,
+reglas_TSH_por_confianza <- head(subReglas_TSH, n = 10,
                                        by = "confidence")
 inspect(reglas_TSH_por_confianza)
+
+###############################################################################
+#                    Reglas para Variable T3
+###############################################################################
+
+reglas_T3 = apriori(
+  data = datosFiltrados[,c(1:20)], 
+  parameter=list(support = 0.0115, confidence = 0.5, minlen = 3, maxlen = 17, 
+                 target="rules"),
+  appearance=list(rhs = c("T3=Baja"))
+)
+
+# Se filtran solo reglas con lift mayor a uno
+subReglas_T3 <-reglas_T3[quality(reglas_T3)$lift > 1]
+
+
+# Se filtran las diez mejores reglas, ordenadas por su valor de lift
+reglas_T3_por_lift <- head(subReglas_T3, n = 10, by = "lift")
+# Muestra las reglas
+inspect(reglas_T3_por_lift)
+
+# Se filtran las diez mejores reglas, ordenadas por su valor de confianza
+reglas_T3_por_confianza <- head(subReglas_T3, n = 10,
+                                 by = "confidence")
+inspect(reglas_T3_por_confianza)
+
+
+###############################################################################
+#                    Reglas para Variable TT4
+###############################################################################
+
+reglas_TT4 = apriori(
+  data = datosFiltrados[,c(1:20)], 
+  parameter=list(support = 0.01, confidence = 0.5, minlen = 3, maxlen = 17, 
+                 target="rules"),
+  appearance=list(rhs = c("TT4=Baja"))
+)
+
+# Se filtran solo reglas con lift mayor a uno
+subReglas_TT4 <-reglas_TT4[quality(reglas_TT4)$lift > 1]
+
+
+# Se filtran las diez mejores reglas, ordenadas por su valor de lift
+reglas_TT4_por_lift <- head(subReglas_TT4, n = 10, by = "lift")
+# Muestra las reglas
+inspect(reglas_TT4_por_lift)
+
+# Se filtran las diez mejores reglas, ordenadas por su valor de confianza
+reglas_TT4_por_confianza <- head(subReglas_TT4, n = 10,
+                                by = "confidence")
+inspect(reglas_TT4_por_confianza)
+
+###############################################################################
+#                    Reglas para Variable T4U
+###############################################################################
+
+reglas_T4U = apriori(
+  data = datosFiltrados[,c(1:20)], 
+  parameter=list(support = 0.01, confidence = 0.2, minlen = 3, maxlen = 17, 
+                 target="rules"),
+  appearance=list(rhs = c("T4U=Baja"))
+)
+
+# Se filtran solo reglas con lift mayor a uno
+subReglas_T4U <-reglas_T4U[quality(reglas_T4U)$lift > 1]
+
+
+# Se filtran las diez mejores reglas, ordenadas por su valor de lift
+reglas_T4U_por_lift <- head(subReglas_T4U, n = 10, by = "lift")
+# Muestra las reglas
+inspect(reglas_T4U_por_lift)
+
+# Se filtran las diez mejores reglas, ordenadas por su valor de confianza
+reglas_T4U_por_confianza <- head(subReglas_T4U, n = 10,
+                                 by = "confidence")
+inspect(reglas_T4U_por_confianza)
+
+###############################################################################
+#                    Reglas para Variable FTI
+###############################################################################
+
+reglas_FTI = apriori(
+  data = datosFiltrados[,c(1:20)], 
+  parameter=list(support = 0.01, confidence = 0.2, minlen = 3, maxlen = 17, 
+                 target="rules"),
+  appearance=list(rhs = c("FTI=Baja"))
+)
+
+# Se filtran solo reglas con lift mayor a uno
+subReglas_FTI <-reglas_FTI[quality(reglas_FTI)$lift > 1]
+
+
+# Se filtran las diez mejores reglas, ordenadas por su valor de lift
+reglas_FTI_por_lift <- head(subReglas_FTI, n = 10, by = "lift")
+# Muestra las reglas
+inspect(reglas_FTI_por_lift)
+
+# Se filtran las diez mejores reglas, ordenadas por su valor de confianza
+reglas_FTI_por_confianza <- head(subReglas_FTI, n = 10,
+                                 by = "confidence")
+inspect(reglas_FTI_por_confianza)
+
+###############################################################################
+#                    Reglas para Variable Pregnant
+###############################################################################
+
+reglas_pregnant= apriori(
+  data = datosFiltrados[,c(1:20)], 
+  parameter=list(support = 0.01, confidence = 0.01, minlen = 3, maxlen = 17, 
+                 target="rules"),
+  appearance=list(rhs = c("pregnant=t"))
+)
+
+# Se filtran solo reglas con lift mayor a uno
+subReglas_pregnant <-reglas_pregnant[quality(reglas_pregnant)$lift > 1]
+
+
+# Se filtran las diez mejores reglas, ordenadas por su valor de lift
+reglas_pregnant_por_lift <- head(subReglas_pregnant, n = 10, by = "lift")
+# Muestra las reglas
+inspect(reglas_pregnant_por_lift)
+
+# Se filtran las diez mejores reglas, ordenadas por su valor de confianza
+reglas_pregnant_por_confianza <- head(subReglas_pregnant, n = 10,
+                                 by = "confidence")
+inspect(reglas_pregnant_por_confianza)
 
 
