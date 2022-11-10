@@ -156,7 +156,7 @@ datosFiltrados$hypopituitary <- NULL
 #  Arboles de decisión
 ###############################################################################
 
-set.seed(1234)
+set.seed(723)
 # Se crea el conjunto de entrenamiento y el conjunto de prueba
 trainIndex <- createDataPartition(datosFiltrados$classification, p = 0.7, 
                                   list = FALSE)
@@ -180,4 +180,3 @@ print(matrizConfusion)
 plot(arbol)
 # Se imprimen las reglas conseguidas
 summary(arbol_reglas)
-# 1234 seed buena
